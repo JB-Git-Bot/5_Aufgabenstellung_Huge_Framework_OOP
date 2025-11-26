@@ -22,11 +22,20 @@ class RegisterController extends Controller
      */
     public function index()
     {
+        // Wenn Admin: Registrierung erlauben
+        if (Session::get('user_account_type') == 7) { // 7 = Admin
+            $this->View->render('register/index');
+            return;
+        }
+
+        // Wenn normaler User schon eingeloggt ist → weg
         if (LoginModel::isUserLoggedIn()) {
             Redirect::home();
-        } else {
-            $this->View->render('register/index');
+            return;
         }
+
+        // Wenn nicht eingeloggt → Formular anzeigen
+        $this->View->render('register/index');
     }
 
     /**
@@ -37,7 +46,18 @@ class RegisterController extends Controller
     {
         $registration_successful = RegistrationModel::registerNewUser();
 
+        // Prüfen ob Admin registriert
+        $isAdmin = (Session::get('user_account_type') == 7); // 7 = Admin in HUGE
+
         if ($registration_successful) {
+
+            // Wenn Admin einen User anlegt → NICHT zum Login leiten
+            if ($isAdmin) {
+                Redirect::to('admin/index'); // oder 'admin/users'
+                return;
+            }
+
+            // Normaler User → auf Login-Seite
             Redirect::to('login/index');
         } else {
             Redirect::to('register/index');
@@ -67,8 +87,10 @@ class RegisterController extends Controller
      * moment the end-user requests the <img .. >
      * Maybe refactor this sometime.
      */
-    public function showCaptcha()
+
+    /**public function showCaptcha()
     {
         CaptchaModel::generateAndShowCaptcha();
     }
+     */
 }
