@@ -17,6 +17,10 @@
         <!-- logo -->
         <div class="logo"></div>
 
+        <?php
+        $filename = basename($_SERVER['PHP_SELF']);
+        ?>
+
         <!-- navigation -->
         <ul class="navigation">
             <li <?php if (View::checkForActiveController($filename, "index")) { echo ' class="active" '; } ?> >
@@ -31,6 +35,9 @@
                 </li>
                 <li <?php if (View::checkForActiveController($filename, "note")) { echo ' class="active" '; } ?> >
                     <a href="<?php echo Config::get('URL'); ?>note/index">My Notes</a>
+                </li>
+                <li>
+                    <a href="<?php echo Config::get('URL'); ?>chat/index">Chat</a>
                 </li>
             <?php } else { ?>
                 <!-- for not logged in users -->
