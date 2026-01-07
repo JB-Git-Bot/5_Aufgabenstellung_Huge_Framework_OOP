@@ -3,3 +3,9 @@
 /nbproject/private/
 # don't commit all the dependencies fetched via Composer
 /vendor/
+
+# IDEs
+.idea/
+
+# Backup files
+*Backup.php
