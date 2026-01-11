@@ -18,8 +18,16 @@
         <div class="logo"></div>
 
         <?php
-        $filename = basename($_SERVER['PHP_SELF']);
+            $url = $_GET['url'] ?? 'index/index';
+            $url = trim($url, '/');
+
+            $parts = explode('/', $url);
+            $controller = $parts[0] ?? 'index';
+            $action     = $parts[1] ?? 'index';
+
+            $filename = $controller . '/' . $action;
         ?>
+
 
         <!-- navigation -->
         <ul class="navigation">
@@ -36,9 +44,21 @@
                 <li <?php if (View::checkForActiveController($filename, "note")) { echo ' class="active" '; } ?> >
                     <a href="<?php echo Config::get('URL'); ?>note/index">My Notes</a>
                 </li>
-                <li>
-                    <a href="<?php echo Config::get('URL'); ?>chat/index">Chat</a>
+                <li <?php if (View::checkForActiveController($filename, "messenger")) { echo ' class="active" '; } ?> >
+                    <a href="<?php echo Config::get('URL'); ?>messenger/index">
+                        Messages
+                        <?php
+                            // ungelesene Nachrichten zählen
+                            $unread = MessengerModel::countUnread((int) Session::get('user_id'));
+                            if ($unread > 0) {
+                                echo '<span style="background:red;color:white;border-radius:10px;padding:2px 6px;font-size:12px;margin-left:6px;">'
+                                    . (int)$unread .
+                                '</span>';
+                            }
+                        ?>
+                    </a>
                 </li>
+
             <?php } else { ?>
                 <!-- for not logged in users -->
                 <li <?php if (View::checkForActiveControllerAndAction($filename, "login/index")) { echo ' class="active" '; } ?> >

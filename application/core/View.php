@@ -4,6 +4,7 @@
  * Class View
  * The part that handles all the output
  */
+#[\AllowDynamicProperties]
 class View
 {
     /* Resolve all the deprecation errors happening in the views, since they cant be disabled by error_reporting level in 8.4.*/
