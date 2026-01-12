@@ -35,12 +35,68 @@ class LoginController extends Controller
      */
     public function login()
     {
-        // check if csrf token is valid
         if (!Csrf::isTokenValid()) {
-            LoginModel::logout();
-            Redirect::home();
-            exit();
-        }
+        Session::add('feedback_negative', 'CSRF Token ungültig.');
+        LoginModel::logout();
+        Redirect::to('login/index');
+        exit();
+    }
+
+    // --- reCAPTCHA v3 verify (start) ---
+    $recaptchaSecret = '6LeE_UcsAAAAAAEGlKaxwbbkEEyR9x48LmW0sbeJ';
+    $token = Request::post('g-recaptcha-response');
+
+    if (!$token) {
+        Session::add('feedback_negative', 'reCAPTCHA fehlt.');
+        Redirect::to('login/index');
+        exit();
+    }
+
+    $verifyUrl = 'https://www.google.com/recaptcha/api/siteverify';
+    $postData = http_build_query([
+        'secret'   => $recaptchaSecret,
+        'response' => $token,
+        'remoteip' => $_SERVER['REMOTE_ADDR'] ?? ''
+    ]);
+
+    $context = stream_context_create([
+        'http' => [
+            'method'  => 'POST',
+            'header'  => "Content-type: application/x-www-form-urlencoded\r\n",
+            'content' => $postData,
+            'timeout' => 5
+        ]
+    ]);
+
+    $result = file_get_contents($verifyUrl, false, $context);
+    if ($result === false) {
+        Session::add('feedback_negative', 'reCAPTCHA Prüfung nicht erreichbar.');
+        Redirect::to('login/index');
+        exit();
+    }
+
+    $data = json_decode($result, true);
+
+    if (empty($data['success'])) {
+        Session::add('feedback_negative', 'reCAPTCHA ungültig.');
+        Redirect::to('login/index');
+        exit();
+    }
+
+    if (($data['action'] ?? '') !== 'login') {
+        Session::add('feedback_negative', 'reCAPTCHA action ungültig.');
+        Redirect::to('login/index');
+        exit();
+    }
+
+    $score = (float)($data['score'] ?? 0);
+    if ($score < 0.5) {
+        Session::add('feedback_negative', 'Bot-Verdacht (Score zu niedrig).');
+        Redirect::to('login/index');
+        exit();
+    }
+    // --- reCAPTCHA v3 verify (end) ---
+
 
         // perform the login method, put result (true or false) into $login_successful
         $login_successful = LoginModel::login(
