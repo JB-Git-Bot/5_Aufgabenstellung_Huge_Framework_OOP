@@ -1,5 +1,6 @@
 # README – Huge Messenger
 <img width="530" height="419" alt="Messenger" src="https://github.com/user-attachments/assets/a40bc068-9666-412f-b3bf-bb945e11a914" />
+
 ## Projektbeschreibung
 
 Dieses Projekt ist eine Webapplikation auf Basis des **HUge Frameworks (PHP, MVC)**.  
