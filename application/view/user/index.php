@@ -3,7 +3,6 @@
 
     <div class="box">
         <h2>Your profile</h2>
-
         <!-- echo out the system feedback (error and success messages) -->
         <?php $this->renderFeedbackMessages(); ?>
 
@@ -17,5 +16,13 @@
             <?php } ?>
         </div>
         <div>Your account type is: <?= $this->user_account_type; ?></div>
+
+        <?php if (!empty($_COOKIE['recaptcha_ok'])): ?>
+            <div style="background:#d4edda;padding:10px;border:1px solid #aaa;margin-bottom:10px;">
+                ✅ reCAPTCHA v3 verifiziert<br>
+                Score: <?= htmlspecialchars($_COOKIE['recaptcha_score'] ?? '', ENT_QUOTES, 'UTF-8') ?><br>
+                Action: <?= htmlspecialchars($_COOKIE['recaptcha_action'] ?? '', ENT_QUOTES, 'UTF-8') ?>
+            </div>
+        <?php endif; ?>
     </div>
 </div>

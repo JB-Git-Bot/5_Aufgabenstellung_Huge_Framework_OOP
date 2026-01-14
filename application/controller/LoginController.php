@@ -37,17 +37,52 @@ class LoginController extends Controller
     {
         // check if csrf token is valid
         if (!Csrf::isTokenValid()) {
+            Session::add('feedback_negative', 'CSRF ungültig.');
             LoginModel::logout();
-            Redirect::home();
+            Redirect::to('login/index');
             exit();
         }
 
-        // perform the login method, put result (true or false) into $login_successful
-        $login_successful = LoginModel::login(
-            Request::post('user_name'), Request::post('user_password'), Request::post('set_remember_me_cookie')
+        // reCAPTCHA v3 prüfen
+        $secret = '6LeE_UcsAAAAAAEGlKaxwbbkEEyR9x48LmW0sbeJ'; // <- dein privater Key hier
+        $token  = Request::post('g-recaptcha-response');
+
+        if (!$token) {
+            Session::add('feedback_negative', 'reCAPTCHA fehlt.');
+            Redirect::to('login/index');
+            exit();
+        }
+
+        $response = file_get_contents(
+            "https://www.google.com/recaptcha/api/siteverify?secret={$secret}&response={$token}"
         );
 
-        // check login status: if true, then redirect user to user/index, if false, then to login form again
+        $result = json_decode($response, true);
+
+        if (
+            empty($result['success']) ||
+            ($result['action'] ?? '') !== 'login' ||
+            ($result['score'] ?? 0) < 0.5
+        ) {
+            Session::add('feedback_negative', 'reCAPTCHA abgelehnt (Score zu niedrig).');
+            Redirect::to('login/index');
+            exit();
+        }
+
+       // reCAPTCHA war OK -> Cookie setzen (10 Minuten gültig)
+        setcookie('recaptcha_ok', '1', time() + 600, '/', '', false, true);
+        setcookie('recaptcha_score', (string)($result['score'] ?? ''), time() + 600, '/', '', false, true);
+        setcookie('recaptcha_action', (string)($result['action'] ?? ''), time() + 600, '/', '', false, true);
+
+
+
+        // ➜ ERST JETZT Login ausführen
+        $login_successful = LoginModel::login(
+            Request::post('user_name'),
+            Request::post('user_password'),
+            Request::post('set_remember_me_cookie')
+        );
+
         if ($login_successful) {
             if (Request::post('redirect')) {
                 Redirect::toPreviousViewedPageAfterLogin(ltrim(urldecode(Request::post('redirect')), '/'));
