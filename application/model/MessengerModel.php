@@ -6,84 +6,91 @@ class MessengerModel
     {
         $db = DatabaseFactory::getFactory()->getConnection();
 
-        $sql = "SELECT user_id, user_name
-                FROM users
-                WHERE user_id != :id
-                AND user_active = 1
-                AND user_deleted = 0
-                ORDER BY user_name ASC";
-
+        $sql = "CALL sp_messenger_get_all_users_except(:id)";
         $q = $db->prepare($sql);
         $q->execute([':id' => $currentUserId]);
 
-        return $q->fetchAll();
-    }
+        $rows = $q->fetchAll();
+        $q->closeCursor();
 
+        return $rows;
+    }
 
     public static function sendMessage($senderId, $receiverId, $content)
     {
         $db = DatabaseFactory::getFactory()->getConnection();
 
-        $sql = "INSERT INTO messages (sender_id, receiver_id, content, is_read, created_at)
-                VALUES (:s, :r, :c, 0, NOW())";
+        $sql = "CALL sp_messenger_send_message(:s, :r, :c)";
         $q = $db->prepare($sql);
-        return $q->execute([':s' => $senderId, ':r' => $receiverId, ':c' => $content]);
+        $q->execute([
+            ':s' => $senderId,
+            ':r' => $receiverId,
+            ':c' => $content
+        ]);
+
+        $row = $q->fetch();
+        $q->closeCursor();
+
+        return $row && (int)$row->affected_rows === 1;
     }
 
     public static function getConversation($currentUserId, $otherUserId)
     {
         $db = DatabaseFactory::getFactory()->getConnection();
 
-        // Alle Nachrichten zwischen zwei Usern (hin + zurück)
-        $sql = "SELECT m.id, m.sender_id, m.receiver_id, m.content, m.created_at,
-                       u.user_name AS sender_name
-                FROM messages m
-                JOIN users u ON u.user_id = m.sender_id
-                WHERE (m.sender_id = :me AND m.receiver_id = :other)
-                   OR (m.sender_id = :other AND m.receiver_id = :me)
-                ORDER BY m.created_at ASC, m.id ASC";
+        $sql = "CALL sp_messenger_get_conversation(:me, :other)";
         $q = $db->prepare($sql);
-        $q->execute([':me' => $currentUserId, ':other' => $otherUserId]);
+        $q->execute([
+            ':me' => $currentUserId,
+            ':other' => $otherUserId
+        ]);
 
-        return $q->fetchAll();
+        $rows = $q->fetchAll();
+        $q->closeCursor();
+
+        return $rows;
     }
 
     public static function markAsReadFromUser($currentUserId, $otherUserId)
     {
         $db = DatabaseFactory::getFactory()->getConnection();
 
-        // Alles als gelesen markieren, was der andere an mich geschickt hat
-        $sql = "UPDATE messages
-                SET is_read = 1
-                WHERE receiver_id = :me AND sender_id = :other AND is_read = 0";
+        $sql = "CALL sp_messenger_mark_as_read_from_user(:me, :other)";
         $q = $db->prepare($sql);
-        $q->execute([':me' => $currentUserId, ':other' => $otherUserId]);
+        $q->execute([
+            ':me' => $currentUserId,
+            ':other' => $otherUserId
+        ]);
+
+        $q->fetch();
+        $q->closeCursor();
     }
 
     public static function countUnread($currentUserId)
     {
         $db = DatabaseFactory::getFactory()->getConnection();
 
-        $sql = "SELECT COUNT(*) AS cnt
-                FROM messages
-                WHERE receiver_id = :me AND is_read = 0";
+        $sql = "CALL sp_messenger_count_unread(:me)";
         $q = $db->prepare($sql);
         $q->execute([':me' => $currentUserId]);
 
-        return (int) $q->fetch()->cnt;
+        $row = $q->fetch();
+        $q->closeCursor();
+
+        return $row ? (int)$row->cnt : 0;
     }
 
     public static function getUserIdByUsername($username)
     {
         $db = DatabaseFactory::getFactory()->getConnection();
 
-        $sql = "SELECT user_id FROM users WHERE user_name = :name LIMIT 1";
+        $sql = "CALL sp_messenger_get_user_id_by_username(:name)";
         $q = $db->prepare($sql);
         $q->execute([':name' => $username]);
 
         $row = $q->fetch();
+        $q->closeCursor();
+
         return $row ? (int)$row->user_id : 0;
     }
-
-
 }
